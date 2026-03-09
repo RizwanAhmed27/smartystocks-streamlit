@@ -586,7 +586,7 @@ if page != "Settings":
         st.markdown('<div class="sub-title">Forecast demand, optimise stock decisions, and monitor anomalies across your retail network.</div>', unsafe_allow_html=True)
 
     with summary_col:
-        dataset_name = st.session_state.get("uploaded_file_name") or "Default CSV"
+        dataset_name = st.session_state.get("uploaded_file_name") or "Current Data Loaded"
         st.markdown(
             f"""
             <div class="summary-box">
