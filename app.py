@@ -72,6 +72,7 @@ section[data-testid="stSidebar"] .stButton > button{
     border:1px solid rgba(255,255,255,0.10) !important;
     background:rgba(255,255,255,0.08) !important;
     color:#eef2ff !important;
+    margin-bottom:0.45rem !important;
 }
 
 section[data-testid="stSidebar"] .stButton > button:hover{
@@ -79,7 +80,7 @@ section[data-testid="stSidebar"] .stButton > button:hover{
 }
 
 .main-title{
-    font-size:2.2rem;
+    font-size:2.25rem;
     font-weight:800;
     color:#172033;
     margin-bottom:0.1rem;
@@ -87,7 +88,7 @@ section[data-testid="stSidebar"] .stButton > button:hover{
 
 .sub-title{
     color:#6b7280;
-    font-size:0.96rem;
+    font-size:0.97rem;
     margin-bottom:1rem;
 }
 
@@ -98,7 +99,7 @@ section[data-testid="stSidebar"] .stButton > button:hover{
     border:1px solid #e7ecf5;
     box-shadow:0 8px 24px rgba(16,24,40,0.05);
     text-align:center;
-    min-height:110px;
+    min-height:115px;
 }
 
 .kpi-label{
@@ -164,6 +165,25 @@ section[data-testid="stSidebar"] .stButton > button:hover{
 h2,h3{
     color:#172033;
 }
+
+.gauge-wrap{
+    width:100%;
+    background:#e5e7eb;
+    border-radius:999px;
+    height:16px;
+    overflow:hidden;
+    margin-top:8px;
+}
+
+.gauge-bar{
+    height:16px;
+    border-radius:999px;
+}
+
+.small-note{
+    color:#6b7280;
+    font-size:0.88rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -191,7 +211,7 @@ if "Date" in df.columns:
 # =====================================================
 with st.sidebar:
     st.markdown("## 📦 Smarty Stocks Pro")
-    st.caption("Inventory Intelligence System")
+    st.caption("Enterprise Inventory Intelligence")
 
     if st.button("Dashboard", use_container_width=True):
         st.session_state["page"] = "Dashboard"
@@ -310,6 +330,32 @@ def clip_limit(a, b=None, use_clip=True, percentile=95):
         return float(np.percentile(vals, percentile))
     return float(np.max(vals))
 
+def accuracy_label(r2_value: float):
+    if r2_value < 0.30:
+        return "Low", "#dc2626"
+    if r2_value < 0.60:
+        return "Moderate", "#d97706"
+    return "Strong", "#16a34a"
+
+def render_accuracy_gauge(r2_value: float):
+    pct = max(0, min(100, r2_value * 100))
+    label, color = accuracy_label(r2_value)
+    st.markdown(
+        f"""
+        <div class="panel">
+            <h3 style="margin-bottom:0.35rem;">Forecast Accuracy Gauge</h3>
+            <div style="font-size:1.9rem;font-weight:800;color:#172033;">{pct:.1f}%</div>
+            <div class="gauge-wrap">
+                <div class="gauge-bar" style="width:{pct:.1f}%; background:{color};"></div>
+            </div>
+            <div class="small-note" style="margin-top:10px;">
+                Accuracy interpretation: <b style="color:{color};">{label}</b>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 def make_dashboard_ai_explanation(df_in: pd.DataFrame, mae: float, r2: float) -> str:
     reorder = int((df_in["Recommended Action"] == "Reorder Inventory").sum())
     maintain = int((df_in["Recommended Action"] == "Maintain Level").sum())
@@ -327,7 +373,7 @@ def make_dashboard_ai_explanation(df_in: pd.DataFrame, mae: float, r2: float) ->
     forecast_direction = "under-forecasting" if avg_pred < avg_actual else "over-forecasting"
 
     return f"""
-The dashboard is currently analysing **{len(df_in):,} rows** after applying the selected filters.
+The dashboard is currently analysing **{len(df_in):,} evaluated rows** after applying the selected filters.
 
 Average actual sales are **{avg_actual:.2f} units**, while average predicted demand is **{avg_pred:.2f} units**, which suggests the model is **{forecast_direction}** slightly in this filtered view.
 
@@ -345,6 +391,34 @@ The most represented store is **{top_store}**, while the most represented catego
 Model quality in this filtered segment:
 - **MAE:** {mae:.2f}
 - **R²:** {r2:.2f}
+""".strip()
+
+def make_management_insights(df_in: pd.DataFrame) -> str:
+    if df_in.empty:
+        return "No insights are available for the current filters."
+
+    sales_by_store = (
+        df_in.groupby("Store ID")["Actual Units Sold"].sum().sort_values(ascending=False)
+        if "Store ID" in df_in.columns else pd.Series(dtype=float)
+    )
+
+    best_store = sales_by_store.index[0] if len(sales_by_store) > 0 else "N/A"
+    worst_store = sales_by_store.index[-1] if len(sales_by_store) > 0 else "N/A"
+
+    anomaly_count = int((df_in["Anomaly Status"] == "Anomaly").sum())
+    top_category = df_in["Category"].astype(str).value_counts().idxmax() if "Category" in df_in.columns else "N/A"
+    dominant_action = df_in["Recommended Action"].astype(str).value_counts().idxmax() if "Recommended Action" in df_in.columns else "N/A"
+
+    return f"""
+Management insights for the current filtered view:
+
+- **Best performing store:** {best_store}
+- **Weakest performing store:** {worst_store}
+- **Most active category:** {top_category}
+- **Most common inventory decision:** {dominant_action}
+- **Anomalies detected:** {anomaly_count}
+
+This suggests that managers should prioritise reviewing the anomalous records while focusing replenishment or stock policy decisions on the most active store-category combinations.
 """.strip()
 
 def make_forecast_ai_explanation(df_in: pd.DataFrame, mae: float, r2: float) -> str:
@@ -366,7 +440,7 @@ In this filtered view, average actual sales are **{avg_actual:.2f} units** and a
 
 The average absolute error is **{avg_err:.2f} units**, while the largest observed forecast error is **{max_err:.2f} units**.
 
-This means the table helps you identify where the model is predicting well and where it is struggling, which is useful for evaluating forecast reliability before inventory decisions are made.
+This means the table helps identify where the forecasting model is performing well and where forecast reliability becomes weaker.
 
 Model quality:
 - **MAE:** {mae:.2f}
@@ -384,7 +458,7 @@ def make_anomaly_ai_explanation(df_in: pd.DataFrame) -> str:
     top_category = df_in["Category"].astype(str).value_counts().idxmax() if "Category" in df_in.columns else "N/A"
 
     return f"""
-This anomaly monitoring table shows only the rows classified as unusual by the Isolation Forest model.
+This anomaly monitoring table shows only the records classified as unusual by the Isolation Forest model.
 
 An anomaly means the row behaves differently from the normal pattern learned from:
 - actual sales
@@ -396,11 +470,9 @@ In the current filtered view:
 - Average anomaly score is **{avg_score:.3f}**
 - Highest anomaly score is **{max_score:.3f}**
 
-Higher anomaly scores indicate more unusual behaviour.
+The most frequently affected store is **{top_store}**, while the most affected category is **{top_category}**.
 
-The store most frequently appearing in anomalous rows is **{top_store}**, and the category most frequently appearing is **{top_category}**.
-
-This table is useful for identifying sudden demand spikes, irregular forecast behaviour, possible stock issues, or unusual sales patterns that may require investigation.
+These records may indicate unusual demand spikes, irregular stock behaviour, exceptional transactions, or operational inconsistencies that warrant review.
 """.strip()
 
 def make_decision_ai_explanation(df_in: pd.DataFrame) -> str:
@@ -429,7 +501,7 @@ In the current filtered view:
 
 Average predicted demand is **{avg_pred:.2f} units**, average inventory level is **{avg_inventory:.2f} units**, and the average action score is **{avg_action:.2f}**.
 
-This table helps turn AI predictions into operational decisions, making it easier for managers to prioritise replenishment, avoid overstocking, and review unusual situations.
+This table translates AI outputs into inventory actions that can directly support stock planning and operational review.
 """.strip()
 
 # =====================================================
@@ -586,7 +658,7 @@ if page != "Settings":
         st.markdown('<div class="sub-title">Forecast demand, optimise stock decisions, and monitor anomalies across your retail network.</div>', unsafe_allow_html=True)
 
     with summary_col:
-        dataset_name = st.session_state.get("uploaded_file_name") or "Current Data Loaded"
+        dataset_name = st.session_state.get("uploaded_file_name") or "Default CSV"
         st.markdown(
             f"""
             <div class="summary-box">
@@ -623,13 +695,43 @@ if page == "Dashboard":
     st.markdown("### AI Explanation")
     st.markdown(f'<div class="info-box">{make_dashboard_ai_explanation(results, mae, r2)}</div>', unsafe_allow_html=True)
 
-    st.markdown("### Visual Analytics")
-    row1_col1, row1_col2 = st.columns(2)
+    st.markdown("### Management Insights")
+    st.markdown(f'<div class="info-box">{make_management_insights(results)}</div>', unsafe_allow_html=True)
 
+    dash_g1, dash_g2 = st.columns([2, 1])
+    with dash_g1:
+        st.markdown("### Visual Analytics")
+    with dash_g2:
+        render_accuracy_gauge(r2)
+
+    row1_col1, row1_col2 = st.columns(2)
     with row1_col1:
         st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.subheader("Actual vs Predicted Demand")
+        st.subheader("Demand Trend Over Time")
         fig = plt.figure(figsize=(7, 4))
+        if "Date" in results.columns and results["Date"].notna().any():
+            trend_df = (
+                results.dropna(subset=["Date"])
+                .sort_values("Date")
+                .groupby("Date")[["Actual Units Sold", "Predicted Demand"]]
+                .mean()
+                .reset_index()
+            )
+            trend_df = trend_df.tail(120)
+            plt.plot(trend_df["Date"], trend_df["Actual Units Sold"], label="Actual")
+            plt.plot(trend_df["Date"], trend_df["Predicted Demand"], label="Predicted")
+            plt.xticks(rotation=30)
+            plt.legend()
+        else:
+            plt.text(0.5, 0.5, "Date column unavailable", ha="center")
+        plt.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with row1_col2:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.subheader("Actual vs Predicted Demand")
+        fig2 = plt.figure(figsize=(7, 4))
         plot_df = results.copy()
         lim = clip_limit(
             results["Actual Units Sold"],
@@ -642,24 +744,78 @@ if page == "Dashboard":
                 (plot_df["Actual Units Sold"] <= lim) &
                 (plot_df["Predicted Demand"] <= lim)
             ]
-        plt.scatter(plot_df["Actual Units Sold"], plot_df["Predicted Demand"], alpha=0.25)
-        plt.plot([0, 400], [0, 400], "--")
-        plt.xlim(0, 350)
-        plt.ylim(0, 400)
+        plt.scatter(plot_df["Actual Units Sold"], plot_df["Predicted Demand"], alpha=0.22)
+        plt.plot([0, 500], [0, 500], "--")
+        plt.xlim(0, 500)
+        plt.ylim(0, 500)
         plt.xlabel("Actual")
         plt.ylabel("Predicted")
         plt.tight_layout()
-        st.pyplot(fig, use_container_width=True)
+        st.pyplot(fig2, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with row1_col2:
+    row2_col1, row2_col2 = st.columns(2)
+    with row2_col1:
         st.markdown('<div class="panel">', unsafe_allow_html=True)
         st.subheader("Recommended Action Distribution")
-        fig2 = plt.figure(figsize=(7, 4))
+        fig3 = plt.figure(figsize=(7, 4))
         results["Recommended Action"].value_counts().plot(kind="bar")
         plt.ylabel("Count")
         plt.tight_layout()
-        st.pyplot(fig2, use_container_width=True)
+        st.pyplot(fig3, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with row2_col2:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.subheader("Residual Distribution")
+        fig4 = plt.figure(figsize=(7, 4))
+        plt.hist(results["Residual"], bins=40)
+        plt.xlabel("Residual")
+        plt.ylabel("Frequency")
+        plt.tight_layout()
+        st.pyplot(fig4, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    row3_col1, row3_col2 = st.columns(2)
+    with row3_col1:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.subheader("Store Performance Ranking")
+        ranking = results.groupby("Store ID").agg(
+            Total_Sales=("Actual Units Sold", "sum"),
+            Avg_Error=("Absolute Error", "mean"),
+            Anomalies=("Anomaly Status", lambda x: (x == "Anomaly").sum())
+        ).reset_index()
+        ranking["Risk Score"] = ranking["Avg_Error"] + ranking["Anomalies"] * 2
+        ranking = ranking.sort_values(["Total_Sales", "Risk Score"], ascending=[False, True]).reset_index(drop=True)
+        ranking.index = ranking.index + 1
+        st.dataframe(ranking, use_container_width=True, height=320)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with row3_col2:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.subheader("Anomaly Heatmap (Store x Category)")
+        fig5 = plt.figure(figsize=(7, 4))
+        heat_df = results.copy()
+        heat_df["Anomaly Binary"] = (heat_df["Anomaly Status"] == "Anomaly").astype(int)
+        if "Store ID" in heat_df.columns and "Category" in heat_df.columns:
+            pivot = heat_df.pivot_table(
+                index="Store ID",
+                columns="Category",
+                values="Anomaly Binary",
+                aggfunc="sum",
+                fill_value=0
+            )
+            if pivot.shape[0] > 0 and pivot.shape[1] > 0:
+                plt.imshow(pivot.values, aspect="auto")
+                plt.xticks(range(len(pivot.columns)), pivot.columns, rotation=35, ha="right")
+                plt.yticks(range(len(pivot.index)), pivot.index)
+                plt.colorbar(label="Anomaly Count")
+            else:
+                plt.text(0.5, 0.5, "No heatmap data", ha="center")
+        else:
+            plt.text(0.5, 0.5, "Required columns unavailable", ha="center")
+        plt.tight_layout()
+        st.pyplot(fig5, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("### Top Anomalies")
