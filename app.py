@@ -265,6 +265,9 @@ def safe_download_button(df_in: pd.DataFrame, filename: str, label: str):
         use_container_width=True
     )
 
+def existing_cols(df_in: pd.DataFrame, cols: list[str]) -> list[str]:
+    return [c for c in cols if c in df_in.columns]
+
 def render_filters(data: pd.DataFrame) -> pd.DataFrame:
     st.markdown('<div class="section-title">Filters</div>', unsafe_allow_html=True)
     working = data.copy()
@@ -376,6 +379,38 @@ def render_accuracy_gauge(r2_value: float):
         """,
         unsafe_allow_html=True
     )
+
+def style_status_dataframe(df_in: pd.DataFrame):
+    def color_action(val):
+        if val == "Reorder Inventory":
+            return "background-color: #fee2e2; color: #991b1b; font-weight: 700;"
+        if val == "Maintain Level":
+            return "background-color: #dbeafe; color: #1d4ed8; font-weight: 700;"
+        if val == "Reduce Stock":
+            return "background-color: #dcfce7; color: #166534; font-weight: 700;"
+        return ""
+
+    def color_anomaly(val):
+        if val == "Anomaly":
+            return "background-color: #fef3c7; color: #92400e; font-weight: 700;"
+        if val == "Normal":
+            return "background-color: #f3f4f6; color: #374151; font-weight: 700;"
+        return ""
+
+    styler = df_in.style
+    if "Recommended Action" in df_in.columns:
+        styler = styler.map(color_action, subset=["Recommended Action"])
+    if "Anomaly Status" in df_in.columns:
+        styler = styler.map(color_anomaly, subset=["Anomaly Status"])
+
+    format_dict = {}
+    for col in ["Predicted Demand", "Residual", "Absolute Error", "Action Score", "Anomaly Score"]:
+        if col in df_in.columns:
+            format_dict[col] = "{:.2f}"
+    if format_dict:
+        styler = styler.format(format_dict)
+
+    return styler
 
 def make_dashboard_ai_explanation(df_in: pd.DataFrame, mae: float, r2: float) -> str:
     reorder = int((df_in["Recommended Action"] == "Reorder Inventory").sum())
@@ -709,13 +744,13 @@ if page == "Dashboard":
     k4.markdown(f'<div class="kpi-card"><div class="kpi-label">Anomalies</div><div class="kpi-value">{anomalies}</div></div>', unsafe_allow_html=True)
 
     st.markdown("")
-    ai_col, mgmt_col = st.columns([1.4, 1])
+    ai_col, gauge_col = st.columns([1.45, 1])
 
     with ai_col:
         st.markdown('<div class="section-title">AI Explanation</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="info-box">{make_dashboard_ai_explanation(results, mae, r2)}</div>', unsafe_allow_html=True)
 
-    with mgmt_col:
+    with gauge_col:
         st.markdown('<div class="section-title">Forecast Accuracy</div>', unsafe_allow_html=True)
         render_accuracy_gauge(r2)
 
@@ -809,7 +844,7 @@ if page == "Dashboard":
         ranking["Risk Score"] = ranking["Avg_Error"] + ranking["Anomalies"] * 2
         ranking = ranking.sort_values(["Total_Sales", "Risk Score"], ascending=[False, True]).reset_index(drop=True)
         ranking.index = ranking.index + 1
-        st.dataframe(ranking, use_container_width=True, height=320)
+        st.dataframe(ranking[existing_cols(ranking, ["Store ID", "Total_Sales", "Avg_Error", "Anomalies", "Risk Score"])], use_container_width=True, height=320)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with row3_col2:
@@ -841,25 +876,36 @@ if page == "Dashboard":
 
     st.markdown("")
     bottom1, bottom2 = st.columns([1, 1])
+
     with bottom1:
         st.markdown('<div class="section-title">Top Anomalies</div>', unsafe_allow_html=True)
         top_anom = results[results["Anomaly Status"] == "Anomaly"].sort_values("Anomaly Score", ascending=False)
         st.markdown(f'<div class="info-box">{make_anomaly_ai_explanation(top_anom)}</div>', unsafe_allow_html=True)
-        st.dataframe(top_anom.head(25), use_container_width=True, height=320)
+        top_anom_cols = existing_cols(top_anom, [
+            "Date", "Store ID", "Category", "Inventory Level",
+            "Actual Units Sold", "Predicted Demand", "Residual",
+            "Anomaly Status", "Anomaly Score"
+        ])
+        st.dataframe(style_status_dataframe(top_anom[top_anom_cols].head(25)), use_container_width=True, height=320)
 
     with bottom2:
         st.markdown('<div class="section-title">Executive Report Preview</div>', unsafe_allow_html=True)
-        preview_cols = [c for c in [
+        preview_cols = existing_cols(results, [
             "Date", "Store ID", "Category", "Inventory Level",
-            "Actual Units Sold", "Predicted Demand", "Recommended Action",
-            "Anomaly Status", "Anomaly Score"
-        ] if c in results.columns]
-        st.dataframe(results[preview_cols].head(25), use_container_width=True, height=320)
+            "Actual Units Sold", "Predicted Demand",
+            "Recommended Action", "Anomaly Status", "Anomaly Score"
+        ])
+        st.dataframe(style_status_dataframe(results[preview_cols].head(25)), use_container_width=True, height=320)
 
     st.markdown("")
     st.markdown('<div class="section-title">Executive Report</div>', unsafe_allow_html=True)
-    st.dataframe(results, use_container_width=True, height=520)
-    safe_download_button(results, "executive_report.csv", "Download Executive Report")
+    executive_cols = existing_cols(results, [
+        "Date", "Store ID", "Category", "Inventory Level", "Units Ordered",
+        "Actual Units Sold", "Predicted Demand", "Residual", "Absolute Error",
+        "Recommended Action", "Action Score", "Anomaly Status", "Anomaly Score"
+    ])
+    st.dataframe(style_status_dataframe(results[executive_cols]), use_container_width=True, height=520)
+    safe_download_button(results[executive_cols], "executive_report.csv", "Download Executive Report")
 
 # =====================================================
 # DEMAND FORECASTING
@@ -911,8 +957,12 @@ elif page == "Demand Forecasting":
 
     st.markdown("")
     st.markdown('<div class="section-title">Forecast Results</div>', unsafe_allow_html=True)
-    st.dataframe(results, use_container_width=True, height=520)
-    safe_download_button(results, "forecast_results.csv", "Download Forecast Results")
+    forecast_cols = existing_cols(results, [
+        "Date", "Store ID", "Category", "Inventory Level", "Units Ordered",
+        "Actual Units Sold", "Predicted Demand", "Residual", "Absolute Error"
+    ])
+    st.dataframe(style_status_dataframe(results[forecast_cols]), use_container_width=True, height=520)
+    safe_download_button(results[forecast_cols], "forecast_results.csv", "Download Forecast Results")
 
 # =====================================================
 # INVENTORY DECISION & CONTROL
@@ -966,13 +1016,23 @@ elif page == "Inventory Decision & Control":
     st.markdown('<div class="section-title">Anomaly Monitoring</div>', unsafe_allow_html=True)
     anomaly_table = results[results["Anomaly Status"] == "Anomaly"].sort_values("Anomaly Score", ascending=False)
     st.markdown(f'<div class="info-box">{make_anomaly_ai_explanation(anomaly_table)}</div>', unsafe_allow_html=True)
-    st.dataframe(anomaly_table, use_container_width=True, height=360)
-    safe_download_button(anomaly_table, "anomaly_results.csv", "Download Anomaly Results")
+    anomaly_cols = existing_cols(anomaly_table, [
+        "Date", "Store ID", "Category", "Inventory Level",
+        "Actual Units Sold", "Predicted Demand", "Residual",
+        "Anomaly Status", "Anomaly Score", "Recommended Action"
+    ])
+    st.dataframe(style_status_dataframe(anomaly_table[anomaly_cols]), use_container_width=True, height=360)
+    safe_download_button(anomaly_table[anomaly_cols], "anomaly_results.csv", "Download Anomaly Results")
 
     st.markdown("")
     st.markdown('<div class="section-title">Decision Report</div>', unsafe_allow_html=True)
-    st.dataframe(results, use_container_width=True, height=520)
-    safe_download_button(results, "decision_results.csv", "Download Decision Report")
+    decision_cols = existing_cols(results, [
+        "Date", "Store ID", "Category", "Inventory Level",
+        "Predicted Demand", "Recommended Action", "Action Score",
+        "Anomaly Status", "Anomaly Score"
+    ])
+    st.dataframe(style_status_dataframe(results[decision_cols]), use_container_width=True, height=520)
+    safe_download_button(results[decision_cols], "decision_results.csv", "Download Decision Report")
 
 # =====================================================
 # SETTINGS
