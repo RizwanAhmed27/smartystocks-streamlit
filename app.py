@@ -236,19 +236,19 @@ with st.sidebar:
     st.markdown("## 📦 Smarty Stocks Pro")
     st.caption("Enterprise Inventory Intelligence")
 
-    if st.button("Dashboard", use_container_width=True):
+    if st.button("🪩 Dashboard", use_container_width=True):
         st.session_state["page"] = "Dashboard"
         st.rerun()
 
-    if st.button("Demand Forecasting", use_container_width=True):
+    if st.button("📈 Demand Forecasting", use_container_width=True):
         st.session_state["page"] = "Demand Forecasting"
         st.rerun()
 
-    if st.button("Inventory Decision & Control", use_container_width=True):
+    if st.button("💡 Inventory Decision & Control", use_container_width=True):
         st.session_state["page"] = "Inventory Decision & Control"
         st.rerun()
 
-    if st.button("Settings", use_container_width=True):
+    if st.button("⚙️ Settings", use_container_width=True):
         st.session_state["page"] = "Settings"
         st.rerun()
 
@@ -707,7 +707,7 @@ if page != "Settings":
     title_col, summary_col = st.columns([3, 1])
 
     with title_col:
-        st.markdown('<div class="main-title">Smarty Stocks Pro</div>', unsafe_allow_html=True)
+        st.markdown('<div class="main-title">📦 Smarty Stocks Pro</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-title">Forecast demand, optimise stock decisions, and monitor anomalies across your retail network.</div>', unsafe_allow_html=True)
 
     with summary_col:
