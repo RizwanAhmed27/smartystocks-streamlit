@@ -49,6 +49,12 @@ st.markdown("""
     background:#f6f8fc;
 }
 
+.block-container{
+    padding-top:1.2rem;
+    padding-bottom:2rem;
+}
+
+/* Sidebar */
 section[data-testid="stSidebar"]{
     background:linear-gradient(180deg,#0b1736 0%,#12244d 100%);
     border-right:1px solid rgba(255,255,255,0.06);
@@ -79,11 +85,12 @@ section[data-testid="stSidebar"] .stButton > button:hover{
     background:rgba(255,255,255,0.16) !important;
 }
 
+/* Typography */
 .main-title{
     font-size:2.25rem;
     font-weight:800;
     color:#172033;
-    margin-bottom:0.1rem;
+    margin-bottom:0.12rem;
 }
 
 .sub-title{
@@ -92,6 +99,25 @@ section[data-testid="stSidebar"] .stButton > button:hover{
     margin-bottom:1rem;
 }
 
+.section-title{
+    font-size:1.55rem;
+    font-weight:800;
+    color:#172033;
+    margin:0.2rem 0 0.8rem 0;
+}
+
+.section-chip{
+    display:inline-block;
+    background:#2563eb;
+    color:white;
+    padding:0.45rem 0.95rem;
+    border-radius:999px;
+    font-weight:700;
+    font-size:0.84rem;
+    margin-bottom:0.65rem;
+}
+
+/* Cards */
 .kpi-card{
     background:#ffffff;
     border-radius:18px;
@@ -99,7 +125,7 @@ section[data-testid="stSidebar"] .stButton > button:hover{
     border:1px solid #e7ecf5;
     box-shadow:0 8px 24px rgba(16,24,40,0.05);
     text-align:center;
-    min-height:115px;
+    min-height:110px;
 }
 
 .kpi-label{
@@ -121,6 +147,7 @@ section[data-testid="stSidebar"] .stButton > button:hover{
     padding:1rem;
     border:1px solid #e7ecf5;
     box-shadow:0 8px 24px rgba(16,24,40,0.05);
+    height:100%;
 }
 
 .info-box{
@@ -146,43 +173,37 @@ section[data-testid="stSidebar"] .stButton > button:hover{
     font-size:0.94rem;
 }
 
-.section-chip{
-    display:inline-block;
-    background:#2563eb;
-    color:white;
-    padding:0.45rem 0.95rem;
-    border-radius:999px;
-    font-weight:700;
-    font-size:0.84rem;
-    margin-bottom:0.75rem;
-}
-
-.stDownloadButton > button{
-    border-radius:12px !important;
-    font-weight:700 !important;
-}
-
-h2,h3{
-    color:#172033;
-}
-
+/* Gauge */
 .gauge-wrap{
     width:100%;
     background:#e5e7eb;
     border-radius:999px;
-    height:16px;
+    height:14px;
     overflow:hidden;
-    margin-top:8px;
+    margin-top:10px;
 }
 
 .gauge-bar{
-    height:16px;
+    height:14px;
     border-radius:999px;
 }
 
 .small-note{
     color:#6b7280;
     font-size:0.88rem;
+    margin-top:10px;
+}
+
+/* Misc */
+.stDownloadButton > button{
+    border-radius:12px !important;
+    font-weight:700 !important;
+}
+
+div[data-testid="stDataFrame"]{
+    border-radius:14px;
+    overflow:hidden;
+    border:1px solid #e7ecf5;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -245,7 +266,7 @@ def safe_download_button(df_in: pd.DataFrame, filename: str, label: str):
     )
 
 def render_filters(data: pd.DataFrame) -> pd.DataFrame:
-    st.subheader("Filters")
+    st.markdown('<div class="section-title">Filters</div>', unsafe_allow_html=True)
     working = data.copy()
 
     c1, c2, c3, c4 = st.columns([1, 1, 1, 0.45])
@@ -348,7 +369,7 @@ def render_accuracy_gauge(r2_value: float):
             <div class="gauge-wrap">
                 <div class="gauge-bar" style="width:{pct:.1f}%; background:{color};"></div>
             </div>
-            <div class="small-note" style="margin-top:10px;">
+            <div class="small-note">
                 Accuracy interpretation: <b style="color:{color};">{label}</b>
             </div>
         </div>
@@ -373,9 +394,9 @@ def make_dashboard_ai_explanation(df_in: pd.DataFrame, mae: float, r2: float) ->
     forecast_direction = "under-forecasting" if avg_pred < avg_actual else "over-forecasting"
 
     return f"""
-The dashboard is currently analysing **{len(df_in):,} evaluated rows** after applying the selected filters.
+The dashboard is currently analysing **{len(df_in):,} evaluated rows** after the selected filters were applied.
 
-Average actual sales are **{avg_actual:.2f} units**, while average predicted demand is **{avg_pred:.2f} units**, which suggests the model is **{forecast_direction}** slightly in this filtered view.
+Average actual sales are **{avg_actual:.2f} units**, while average predicted demand is **{avg_pred:.2f} units**, suggesting the model is **{forecast_direction}** slightly in this view.
 
 Average inventory level is **{avg_inventory:.2f} units** and the average absolute forecast error is **{avg_err:.2f} units**.
 
@@ -384,11 +405,11 @@ The decision engine recommended:
 - **{maintain}** maintain actions
 - **{reduce}** reduce stock actions
 
-The anomaly model flagged **{anomalies} unusual records** that deviate from normal sales behaviour.
+The anomaly model flagged **{anomalies} unusual records**.
 
 The most represented store is **{top_store}**, while the most represented category is **{top_category}**.
 
-Model quality in this filtered segment:
+Model quality:
 - **MAE:** {mae:.2f}
 - **R²:** {r2:.2f}
 """.strip()
@@ -418,7 +439,7 @@ Management insights for the current filtered view:
 - **Most common inventory decision:** {dominant_action}
 - **Anomalies detected:** {anomaly_count}
 
-This suggests that managers should prioritise reviewing the anomalous records while focusing replenishment or stock policy decisions on the most active store-category combinations.
+This suggests that managers should prioritise reviewing anomalous records while focusing replenishment or stock policy decisions on the most active store-category combinations.
 """.strip()
 
 def make_forecast_ai_explanation(df_in: pd.DataFrame, mae: float, r2: float) -> str:
@@ -431,16 +452,16 @@ def make_forecast_ai_explanation(df_in: pd.DataFrame, mae: float, r2: float) -> 
 This forecast results table shows the Random Forest model output for the currently filtered data.
 
 Each row compares:
-- **Actual Units Sold**: the true observed sales
-- **Predicted Demand**: the model's estimated demand
-- **Residual**: the difference between actual and predicted values
-- **Absolute Error**: the size of the prediction error regardless of direction
+- **Actual Units Sold**
+- **Predicted Demand**
+- **Residual**
+- **Absolute Error**
 
-In this filtered view, average actual sales are **{avg_actual:.2f} units** and average predicted demand is **{avg_pred:.2f} units**.
+Average actual sales are **{avg_actual:.2f} units**, while average predicted demand is **{avg_pred:.2f} units**.
 
 The average absolute error is **{avg_err:.2f} units**, while the largest observed forecast error is **{max_err:.2f} units**.
 
-This means the table helps identify where the forecasting model is performing well and where forecast reliability becomes weaker.
+This view helps identify where the forecasting model is performing well and where reliability becomes weaker.
 
 Model quality:
 - **MAE:** {mae:.2f}
@@ -458,12 +479,7 @@ def make_anomaly_ai_explanation(df_in: pd.DataFrame) -> str:
     top_category = df_in["Category"].astype(str).value_counts().idxmax() if "Category" in df_in.columns else "N/A"
 
     return f"""
-This anomaly monitoring table shows only the records classified as unusual by the Isolation Forest model.
-
-An anomaly means the row behaves differently from the normal pattern learned from:
-- actual sales
-- predicted demand
-- forecast residuals
+This anomaly monitoring table shows only the rows classified as unusual by the Isolation Forest model.
 
 In the current filtered view:
 - **{len(df_in):,} anomalies** were detected
@@ -472,7 +488,7 @@ In the current filtered view:
 
 The most frequently affected store is **{top_store}**, while the most affected category is **{top_category}**.
 
-These records may indicate unusual demand spikes, irregular stock behaviour, exceptional transactions, or operational inconsistencies that warrant review.
+These records may indicate unusual demand spikes, irregular stock behaviour, exceptional transactions, or operational inconsistencies that warrant further review.
 """.strip()
 
 def make_decision_ai_explanation(df_in: pd.DataFrame) -> str:
@@ -488,10 +504,10 @@ def make_decision_ai_explanation(df_in: pd.DataFrame) -> str:
     return f"""
 This decision report combines forecast demand with current inventory levels using fuzzy logic.
 
-The fuzzy logic system converts numeric values into business-style decisions:
-- **Reorder Inventory** when demand appears high relative to stock
-- **Maintain Level** when stock and demand are reasonably balanced
-- **Reduce Stock** when inventory appears high relative to expected demand
+The fuzzy logic system converts numeric values into business-oriented actions:
+- **Reorder Inventory**
+- **Maintain Level**
+- **Reduce Stock**
 
 In the current filtered view:
 - **{reorder}** rows were flagged for reorder
@@ -501,7 +517,7 @@ In the current filtered view:
 
 Average predicted demand is **{avg_pred:.2f} units**, average inventory level is **{avg_inventory:.2f} units**, and the average action score is **{avg_action:.2f}**.
 
-This table translates AI outputs into inventory actions that can directly support stock planning and operational review.
+This view translates AI outputs into operational inventory decisions.
 """.strip()
 
 # =====================================================
@@ -648,7 +664,7 @@ def run_pipeline(filtered: pd.DataFrame):
     return final_df, mae, r2
 
 # =====================================================
-# COMMON HEADER
+# HEADER
 # =====================================================
 if page != "Settings":
     title_col, summary_col = st.columns([3, 1])
@@ -686,23 +702,29 @@ if page == "Dashboard":
 
     anomalies = int((results["Anomaly Status"] == "Anomaly").sum())
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(f'<div class="kpi-card"><div class="kpi-label">Rows</div><div class="kpi-value">{len(results):,}</div></div>', unsafe_allow_html=True)
-    c2.markdown(f'<div class="kpi-card"><div class="kpi-label">MAE</div><div class="kpi-value">{mae:.2f}</div></div>', unsafe_allow_html=True)
-    c3.markdown(f'<div class="kpi-card"><div class="kpi-label">R²</div><div class="kpi-value">{r2:.2f}</div></div>', unsafe_allow_html=True)
-    c4.markdown(f'<div class="kpi-card"><div class="kpi-label">Anomalies</div><div class="kpi-value">{anomalies}</div></div>', unsafe_allow_html=True)
+    k1, k2, k3, k4 = st.columns(4)
+    k1.markdown(f'<div class="kpi-card"><div class="kpi-label">Rows</div><div class="kpi-value">{len(results):,}</div></div>', unsafe_allow_html=True)
+    k2.markdown(f'<div class="kpi-card"><div class="kpi-label">MAE</div><div class="kpi-value">{mae:.2f}</div></div>', unsafe_allow_html=True)
+    k3.markdown(f'<div class="kpi-card"><div class="kpi-label">R²</div><div class="kpi-value">{r2:.2f}</div></div>', unsafe_allow_html=True)
+    k4.markdown(f'<div class="kpi-card"><div class="kpi-label">Anomalies</div><div class="kpi-value">{anomalies}</div></div>', unsafe_allow_html=True)
 
-    st.markdown("### AI Explanation")
-    st.markdown(f'<div class="info-box">{make_dashboard_ai_explanation(results, mae, r2)}</div>', unsafe_allow_html=True)
+    st.markdown("")
+    ai_col, mgmt_col = st.columns([1.4, 1])
 
-    st.markdown("### Management Insights")
+    with ai_col:
+        st.markdown('<div class="section-title">AI Explanation</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-box">{make_dashboard_ai_explanation(results, mae, r2)}</div>', unsafe_allow_html=True)
+
+    with mgmt_col:
+        st.markdown('<div class="section-title">Forecast Accuracy</div>', unsafe_allow_html=True)
+        render_accuracy_gauge(r2)
+
+    st.markdown("")
+    st.markdown('<div class="section-title">Management Insights</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="info-box">{make_management_insights(results)}</div>', unsafe_allow_html=True)
 
-    dash_g1, dash_g2 = st.columns([2, 1])
-    with dash_g1:
-        st.markdown("### Visual Analytics")
-    with dash_g2:
-        render_accuracy_gauge(r2)
+    st.markdown("")
+    st.markdown('<div class="section-title">Visual Analytics</div>', unsafe_allow_html=True)
 
     row1_col1, row1_col2 = st.columns(2)
     with row1_col1:
@@ -716,12 +738,11 @@ if page == "Dashboard":
                 .groupby("Date")[["Actual Units Sold", "Predicted Demand"]]
                 .mean()
                 .reset_index()
-            )
-            trend_df = trend_df.tail(120)
+            ).tail(120)
             plt.plot(trend_df["Date"], trend_df["Actual Units Sold"], label="Actual")
             plt.plot(trend_df["Date"], trend_df["Predicted Demand"], label="Predicted")
-            plt.xticks(rotation=30)
             plt.legend()
+            plt.xticks(rotation=30)
         else:
             plt.text(0.5, 0.5, "Date column unavailable", ha="center")
         plt.tight_layout()
@@ -818,12 +839,25 @@ if page == "Dashboard":
         st.pyplot(fig5, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("### Top Anomalies")
-    top_anom = results[results["Anomaly Status"] == "Anomaly"].sort_values("Anomaly Score", ascending=False)
-    st.markdown(f'<div class="info-box">{make_anomaly_ai_explanation(top_anom)}</div>', unsafe_allow_html=True)
-    st.dataframe(top_anom.head(25), use_container_width=True, height=320)
+    st.markdown("")
+    bottom1, bottom2 = st.columns([1, 1])
+    with bottom1:
+        st.markdown('<div class="section-title">Top Anomalies</div>', unsafe_allow_html=True)
+        top_anom = results[results["Anomaly Status"] == "Anomaly"].sort_values("Anomaly Score", ascending=False)
+        st.markdown(f'<div class="info-box">{make_anomaly_ai_explanation(top_anom)}</div>', unsafe_allow_html=True)
+        st.dataframe(top_anom.head(25), use_container_width=True, height=320)
 
-    st.markdown("### Executive Report")
+    with bottom2:
+        st.markdown('<div class="section-title">Executive Report Preview</div>', unsafe_allow_html=True)
+        preview_cols = [c for c in [
+            "Date", "Store ID", "Category", "Inventory Level",
+            "Actual Units Sold", "Predicted Demand", "Recommended Action",
+            "Anomaly Status", "Anomaly Score"
+        ] if c in results.columns]
+        st.dataframe(results[preview_cols].head(25), use_container_width=True, height=320)
+
+    st.markdown("")
+    st.markdown('<div class="section-title">Executive Report</div>', unsafe_allow_html=True)
     st.dataframe(results, use_container_width=True, height=520)
     safe_download_button(results, "executive_report.csv", "Download Executive Report")
 
@@ -848,7 +882,7 @@ elif page == "Demand Forecasting":
     c1.metric("MAE", round(mae, 2))
     c2.metric("R²", round(r2, 2))
 
-    st.markdown("### AI Explanation")
+    st.markdown('<div class="section-title">AI Explanation</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="info-box">{make_forecast_ai_explanation(results, mae, r2)}</div>', unsafe_allow_html=True)
 
     f1, f2 = st.columns(2)
@@ -875,7 +909,8 @@ elif page == "Demand Forecasting":
         st.pyplot(fig2, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("### Forecast Results")
+    st.markdown("")
+    st.markdown('<div class="section-title">Forecast Results</div>', unsafe_allow_html=True)
     st.dataframe(results, use_container_width=True, height=520)
     safe_download_button(results, "forecast_results.csv", "Download Forecast Results")
 
@@ -892,7 +927,7 @@ elif page == "Inventory Decision & Control":
         st.warning("Not enough data for the current filters.")
         st.stop()
 
-    st.markdown("### AI Explanation")
+    st.markdown('<div class="section-title">AI Explanation</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="info-box">{make_decision_ai_explanation(results)}</div>', unsafe_allow_html=True)
 
     d1, d2 = st.columns(2)
@@ -927,14 +962,15 @@ elif page == "Inventory Decision & Control":
         st.pyplot(fig2, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("### Anomaly Monitoring")
+    st.markdown("")
+    st.markdown('<div class="section-title">Anomaly Monitoring</div>', unsafe_allow_html=True)
     anomaly_table = results[results["Anomaly Status"] == "Anomaly"].sort_values("Anomaly Score", ascending=False)
     st.markdown(f'<div class="info-box">{make_anomaly_ai_explanation(anomaly_table)}</div>', unsafe_allow_html=True)
     st.dataframe(anomaly_table, use_container_width=True, height=360)
     safe_download_button(anomaly_table, "anomaly_results.csv", "Download Anomaly Results")
 
-    st.markdown("### Decision Report")
-    st.markdown(f'<div class="info-box">{make_decision_ai_explanation(results)}</div>', unsafe_allow_html=True)
+    st.markdown("")
+    st.markdown('<div class="section-title">Decision Report</div>', unsafe_allow_html=True)
     st.dataframe(results, use_container_width=True, height=520)
     safe_download_button(results, "decision_results.csv", "Download Decision Report")
 
