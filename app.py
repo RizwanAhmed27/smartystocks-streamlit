@@ -191,7 +191,7 @@ if "Date" in df.columns:
 # =====================================================
 with st.sidebar:
     st.markdown("## 📦 Smarty Stocks Pro")
-    st.caption("Enterprise Inventory Intelligence")
+    st.caption("Inventory Intelligence System")
 
     if st.button("Dashboard", use_container_width=True):
         st.session_state["page"] = "Dashboard"
