@@ -50,7 +50,7 @@ st.markdown("""
 }
 
 .block-container{
-    padding-top:1.2rem;
+    padding-top:4.5rem;
     padding-bottom:2rem;
 }
 
@@ -90,7 +90,9 @@ section[data-testid="stSidebar"] .stButton > button:hover{
     font-size:2.25rem;
     font-weight:800;
     color:#172033;
-    margin-bottom:0.12rem;
+    margin-bottom:0.2rem;
+    line-height:1.2;
+    padding-top:0.2rem;
 }
 
 .sub-title{
