@@ -803,9 +803,9 @@ if page == "Dashboard":
                 (plot_df["Predicted Demand"] <= lim)
             ]
         plt.scatter(plot_df["Actual Units Sold"], plot_df["Predicted Demand"], alpha=0.22)
-        plt.plot([0, 500], [0, 500], "--")
-        plt.xlim(0, 500)
-        plt.ylim(0, 500)
+        plt.plot([0, 400], [0, 400], "--")
+        plt.xlim(0, 400)
+        plt.ylim(0, 400)
         plt.xlabel("Actual")
         plt.ylabel("Predicted")
         plt.tight_layout()
