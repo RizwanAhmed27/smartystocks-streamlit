@@ -738,12 +738,16 @@ if page == "Dashboard":
         st.stop()
 
     anomalies = int((results["Anomaly Status"] == "Anomaly").sum())
+    total_inventory = float(filtered["Inventory Level"].sum()) if "Inventory Level" in filtered.columns else 0.0
+    total_sales = float(filtered["Units Sold"].sum()) if "Units Sold" in filtered.columns else 0.0
 
-    k1, k2, k3, k4 = st.columns(4)
-    k1.markdown(f'<div class="kpi-card"><div class="kpi-label">Rows</div><div class="kpi-value">{len(results):,}</div></div>', unsafe_allow_html=True)
-    k2.markdown(f'<div class="kpi-card"><div class="kpi-label">MAE</div><div class="kpi-value">{mae:.2f}</div></div>', unsafe_allow_html=True)
-    k3.markdown(f'<div class="kpi-card"><div class="kpi-label">R²</div><div class="kpi-value">{r2:.2f}</div></div>', unsafe_allow_html=True)
-    k4.markdown(f'<div class="kpi-card"><div class="kpi-label">Anomalies</div><div class="kpi-value">{anomalies}</div></div>', unsafe_allow_html=True)
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    k1.markdown(f'<div class="kpi-card"><div class="kpi-label">Total Inventory</div><div class="kpi-value">{total_inventory:,.0f}</div></div>', unsafe_allow_html=True)
+    k2.markdown(f'<div class="kpi-card"><div class="kpi-label">Total Sales</div><div class="kpi-value">{total_sales:,.0f}</div></div>', unsafe_allow_html=True)
+    k3.markdown(f'<div class="kpi-card"><div class="kpi-label">Rows</div><div class="kpi-value">{len(results):,}</div></div>', unsafe_allow_html=True)
+    k4.markdown(f'<div class="kpi-card"><div class="kpi-label">MAE</div><div class="kpi-value">{mae:.2f}</div></div>', unsafe_allow_html=True)
+    k5.markdown(f'<div class="kpi-card"><div class="kpi-label">R²</div><div class="kpi-value">{r2:.2f}</div></div>', unsafe_allow_html=True)
+    k6.markdown(f'<div class="kpi-card"><div class="kpi-label">Anomalies</div><div class="kpi-value">{anomalies}</div></div>', unsafe_allow_html=True)
 
     st.markdown("")
     ai_col, gauge_col = st.columns([1.45, 1])
@@ -766,7 +770,7 @@ if page == "Dashboard":
     row1_col1, row1_col2 = st.columns(2)
     with row1_col1:
         st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.subheader("Demand Trend Over Time")
+        st.subheader("Overall Demand Trend")
         fig = plt.figure(figsize=(7, 4))
         if "Date" in results.columns and results["Date"].notna().any():
             trend_df = (
